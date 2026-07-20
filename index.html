@@ -1,0 +1,1391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商业选址智能分析系统 V5</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{display:flex;height:100vh;font-family:"微软雅黑",sans-serif;overflow:hidden;background:#e8ecf1;padding:8px;gap:8px}
+.panel{width:440px;padding:14px;background:#fff;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.08);overflow-y:auto;display:flex;flex-direction:column;gap:10px;border:1px solid #e8e8e8}
+h2{font-size:16px;color:#222;margin-bottom:2px;padding:10px 14px;background:linear-gradient(135deg,#1677ff 0%,#125fd9 100%);color:#fff;border-radius:12px;text-align:center;box-shadow:0 2px 8px rgba(22,119,255,0.3);letter-spacing:1px}
+h3{font-size:13px;color:#444;margin:0}
+.section-title{cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 12px;background:linear-gradient(135deg,#f8f9fa 0%,#f0f2f5 100%);border-radius:10px;border:1px solid #e8e8e8;margin:4px 0;font-weight:600;font-size:13px;color:#333;transition:all 0.2s}
+.section-title:hover{background:linear-gradient(135deg,#e8f0fe 0%,#d6e4ff 100%);border-color:#1677ff}
+.section-title .logo{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.section-title .arrow{margin-left:auto;font-size:11px;color:#888;transition:transform 0.2s}
+.tooltip{position:relative}
+.tooltip::after{content:attr(data-tip);position:absolute;left:100%;top:50%;transform:translateY(-50%);margin-left:8px;padding:6px 10px;background:#333;color:#fff;font-size:11px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity 0.2s;z-index:1000}
+.tooltip:hover::after{opacity:1}
+
+/* 点位标签栏 */
+.site-bar{display:flex;gap:6px;margin-bottom:4px;flex-wrap:wrap;align-items:center}
+.site-tab{padding:6px 12px;border:1px solid #ddd;background:#fff;border-radius:12px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:4px;transition:all 0.2s;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
+.site-tab:hover{border-color:#1677ff;box-shadow:0 2px 6px rgba(22,119,255,0.15)}
+.site-tab.active{background:#1677ff;color:#fff;border-color:#1677ff}
+.site-tab .dot{width:8px;height:8px;border-radius:50%}
+.site-tab .close{font-size:14px;line-height:1;margin-left:4px;color:#999}
+.site-tab .close:hover{color:#f53f3f}
+.add-site-btn{padding:6px 12px;border:1px dashed #1677ff;background:#f0f5ff;color:#1677ff;border-radius:12px;cursor:pointer;font-size:12px;transition:all 0.2s}
+.add-site-btn:hover{background:#1677ff;color:#fff;border-style:solid;transform:translateY(-1px);box-shadow:0 2px 8px rgba(22,119,255,0.25)}
+.add-site-btn:hover{background:#e0edff}
+
+/* 距离模式 */
+.dist-mode{display:flex;gap:8px;margin:8px 0;font-size:12px;padding:8px;background:#f5f7fa;border-radius:8px}
+.dist-mode label{display:flex;align-items:center;gap:4px;cursor:pointer}
+
+/* 动态评估点 */
+.cat-section{background:#fff;border-radius:10px;padding:10px;border:1px solid #e8e8e8;margin-bottom:6px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.cat-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cat-title{font-size:13px;font-weight:bold;color:#333}
+.cat-actions{display:flex;gap:4px}
+.icon-btn{padding:2px 6px;border:1px solid #ddd;background:#f5f5f5;border-radius:3px;cursor:pointer;font-size:11px;color:#666}
+.icon-btn:hover{background:#1677ff;color:#fff;border-color:#1677ff}
+.icon-btn.del:hover{background:#f53f3f;border-color:#f53f3f}
+.weight-row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px}
+.weight-row input[type="number"]{width:55px;padding:3px;border:1px solid #ccc;border-radius:3px;text-align:center;font-size:12px}
+.weight-row input[type="text"]{width:80px;padding:3px;border:1px solid #ccc;border-radius:3px;font-size:12px}
+.weight-row .label{min-width:60px;color:#666}
+.sub-rule{font-size:11px;color:#888;margin-left:8px;padding:2px 0}
+.add-cat-btn{display:block;width:100%;padding:10px;border:2px dashed #1677ff;background:#f0f5ff;color:#1677ff;border-radius:10px;cursor:pointer;font-size:13px;text-align:center;margin:6px 0;transition:all 0.2s;font-weight:500}
+.add-cat-btn:hover{background:#1677ff;color:#fff;border-style:solid}
+.add-cat-btn:hover{background:#e0edff}
+.quick-add-row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.quick-add-btn{padding:5px 12px;border:1px solid #d9d9d9;background:#fff;border-radius:10px;cursor:pointer;font-size:11px;color:#555;transition:all 0.2s}
+.quick-add-btn:hover{background:#1677ff;color:#fff;border-color:#1677ff;transform:translateY(-1px);box-shadow:0 2px 6px rgba(22,119,255,0.2)}
+.quick-add-btn:hover{background:#1677ff;color:#fff;border-color:#1677ff}
+.quick-add-title{font-size:11px;color:#888;margin:4px 0}
+
+/* 数据导入 */
+.data-section{background:#fafbfc;border-radius:12px;padding:12px;border:1px solid #e8e8e8}
+.file-btn{display:block;width:100%;padding:8px;border:1px dashed #1677ff;background:#f0f5ff;color:#1677ff;border-radius:8px;cursor:pointer;font-size:12px;text-align:center;margin:6px 0;transition:all 0.2s}
+.file-btn:hover{background:#1677ff;color:#fff;border-style:solid}
+.file-btn:hover{background:#e0edff}
+.file-input{display:none}
+.import-status{font-size:11px;color:#888;margin:4px 0}
+.import-status.ok{color:#52c41a}
+.import-status.err{color:#f53f3f}
+
+/* 结果与排名 */
+.result-box{background:#fafbfc;border-radius:12px;padding:12px;border:1px solid #e8e8e8;transition:all 0.2s}
+.result-box:hover{box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.result-box h3{margin:0 0 6px;font-size:13px;color:#333}
+.result-box.empty{color:#999;text-align:center;padding:16px;font-size:13px}
+.result-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dotted #f0f0f0}
+.result-row:last-child{border-bottom:none}
+.result-row .label{color:#666;flex:1}
+.result-row .value{color:#333;font-weight:500;white-space:nowrap}
+.total-row{margin-top:6px;padding-top:6px;border-top:2px solid #1677ff;font-size:14px;font-weight:bold;color:#f53f3f}
+.grade-row{font-size:12px;color:#888;margin-top:4px}
+
+.rank-box{background:#fafbfc;border-radius:12px;padding:12px;border:1px solid #e8e8e8}
+.rank-table{width:100%;border-collapse:collapse;font-size:11px}
+.rank-table th,.rank-table td{padding:5px 6px;border-bottom:1px solid #eee;text-align:center}
+.rank-table th{color:#888;font-weight:400}
+.rank-table td:first-child{font-weight:bold}
+.rank-table .best{color:#f53f3f;font-weight:bold}
+.rank-table .good{color:#52c41a}
+
+/* 敏感性分析 */
+.sens-wrap{background:#fafbfc;border-radius:12px;padding:12px;border:1px solid #e8e8e8;display:none}
+#sensChart{width:100%;height:200px}
+
+/* 对比与雷达 */
+.compare-box{background:linear-gradient(135deg,#1677ff 0%,#125fd9 100%);color:#fff;border-radius:12px;padding:12px;text-align:center;display:none;cursor:pointer;box-shadow:0 2px 8px rgba(22,119,255,0.3);transition:all 0.2s}
+.compare-box:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(22,119,255,0.4)}
+.compare-box:hover{background:#125fd9}
+.compare-box h3{color:#fff;margin:0 0 6px;font-size:13px}
+.radar-wrap{background:#fafbfc;border-radius:12px;padding:10px;border:1px solid #e8e8e8;display:none}
+#radarChart{width:100%;height:220px}
+
+#map{flex:1;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);border:1px solid #e8e8e8}
+#debug{position:fixed;bottom:5px;right:5px;background:rgba(0,0,0,0.8);color:#0f0;font-size:10px;padding:6px 10px;border-radius:4px;max-width:280px;max-height:200px;overflow-y:auto;z-index:9999;font-family:monospace;line-height:1.5}
+#loading{color:#1677ff;font-size:12px;display:none;margin:4px 0}
+#alert-box{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #f53f3f;border-radius:8px;padding:20px;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,0.2);z-index:10000;text-align:center}
+#alert-box h3{color:#f53f3f;margin-bottom:10px;font-size:16px}
+#alert-box .close-btn{margin-top:12px;padding:5px 20px;background:#1677ff;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+
+/* 弹窗 */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:20000;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal-content{background:#fff;border-radius:16px;width:90%;max-width:900px;max-height:92vh;overflow-y:auto;padding:24px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+.modal-close{position:absolute;top:12px;right:16px;font-size:24px;cursor:pointer;color:#999;z-index:10}
+.modal-close:hover{color:#333}
+.modal-title{font-size:20px;font-weight:bold;color:#222;margin-bottom:16px;text-align:center}
+.modal-section{margin:14px 0;padding:14px;background:#fafbfc;border-radius:12px;border:1px solid #e8e8e8}
+.modal-section h4{font-size:15px;color:#333;margin-bottom:10px;border-left:4px solid #1677ff;padding-left:8px}
+.score-big{font-size:36px;font-weight:bold;text-align:center;margin:8px 0}
+.winner-badge{display:inline-block;padding:6px 16px;border-radius:20px;font-size:14px;font-weight:bold;color:#fff;margin:4px}
+.modal-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.modal-table th,.modal-table td{padding:8px 10px;border:1px solid #e0e0e0;text-align:center}
+.modal-table th{background:#1677ff;color:#fff;font-weight:500}
+.modal-table td{background:#fff}
+.modal-radar{height:320px;margin-top:8px}
+.suggestion-box{background:#fff;border-left:4px solid #52c41a;padding:12px;margin-top:8px;font-size:13px;line-height:1.8}
+.suggestion-box h5{margin:0 0 6px;color:#52c41a;font-size:14px}
+.map-screenshot-wrap{display:flex;gap:16px;justify-content:center;margin:12px 0;flex-wrap:wrap}
+.map-screenshot{text-align:center}
+.map-screenshot img{width:320px;height:200px;border-radius:8px;border:2px solid #eee;object-fit:cover}
+.map-screenshot-label{margin-top:6px;font-size:13px;font-weight:bold}
+.rule-box{font-size:12px;line-height:1.8;color:#444}
+.rule-section{margin:6px 0;padding:8px;background:#fff;border-radius:4px}
+.rule-section-title{font-weight:bold;color:#1677ff;margin-bottom:4px}
+.action-bar{display:flex;gap:10px;justify-content:center;margin-top:16px}
+.action-btn{padding:8px 24px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500}
+.action-btn.primary{background:#1677ff;color:#fff}
+.action-btn.primary:hover{background:#125fd9}
+.action-btn.secondary{background:#52c41a;color:#fff}
+.action-btn.secondary:hover{background:#389e0d}
+
+/* 时间维度 */
+.time-compare{display:flex;gap:10px;margin-top:8px}
+.time-card{flex:1;padding:10px;background:#fff;border-radius:6px;text-align:center;border:1px solid #eee}
+.time-card-title{font-size:12px;color:#888;margin-bottom:4px}
+.time-card-score{font-size:20px;font-weight:bold;color:#333}
+
+.legend-ring{font-size:11px;color:#888;margin-top:4px}
+.ring-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:2px}
+.data-badge{font-size:10px;padding:1px 4px;border-radius:3px;color:#fff;margin-left:4px}
+.badge-detail{background:#1677ff}
+
+/* 打印 */
+@media print{
+  body *{visibility:hidden}
+  #resultModal{position:static;display:block!important;visibility:visible!important;height:auto!important;background:#fff!important}
+  #reportContent,#reportContent *{visibility:visible}
+  #reportContent{position:static;left:0;top:0;width:100%;max-height:none!important;overflow:visible!important;padding:20px!important}
+  .modal-section{page-break-inside:avoid;margin:10px 0!important;padding:10px!important}
+  .modal-close,.action-bar{display:none!important}
+}
+
+/* 移动端 */
+@media (max-width:768px){
+  body{flex-direction:column;padding:4px;gap:4px}
+  .panel{width:100%;height:40vh;min-height:200px;border-radius:12px}
+  #map{height:60vh;border-radius:12px}
+  .modal-content{width:95%;padding:16px;border-radius:12px}
+  .map-screenshot img{width:100%;height:auto}
+  .section-title{padding:6px 10px;font-size:12px}
+  .section-title .logo{width:18px;height:18px;font-size:11px}
+}
+
+/* 折叠区块 */
+.section-content{display:block;}
+/* 加载遮罩 */
+#loadingOverlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:30000;justify-content:center;align-items:center;flex-direction:column;}
+#loadingOverlay.active{display:flex;}
+.loading-spinner{width:50px;height:50px;border:4px solid rgba(255,255,255,0.3);border-top-color:#1677ff;border-radius:50%;animation:spin 1s linear infinite;}
+.loading-text{color:#fff;margin-top:16px;font-size:16px;}
+@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+
+/* 图例 */
+.legend-wrap{background:#fafbfc;border-radius:12px;padding:12px;border:1px solid #e8e8e8;display:none}
+.legend-wrap h3{margin:0 0 8px;font-size:13px;color:#333}
+.legend-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 8px;font-size:11px}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-label{color:#555}
+</style>
+</head>
+<body>
+<div class="panel">
+<h2>📊 商业选址智能分析 V5</h2>
+
+<div class="site-bar" id="siteBar"></div>
+<button class="add-site-btn" onclick="addSite()">+ 添加点位</button>
+<button class="add-site-btn" style="border-color:#999;color:#666" onclick="clearAllSites()">重置全部</button>
+
+<div class="dist-mode">
+  <label><input type="radio" name="distMode" value="straight" checked onchange="setDistMode(this.value)"> 直线距离</label>
+  <label><input type="radio" name="distMode" value="walking" onchange="setDistMode(this.value)"> 步行距离（高德）</label>
+</div>
+
+<h3 class="section-title tooltip" data-tip="配置各类POI的评分权重，支持自定义类别" onclick="togglePanelSection(this)"><span class="logo" style="background:#e3f2fd">⚙️</span>评估点配置<span class="arrow">▼</span></h3>
+<div class="section-content">
+<div id="catList"></div>
+<button class="add-cat-btn" onclick="addCategory()">+ 新增评估类别</button>
+<div class="quick-add-title">快速添加建议类别：</div>
+<div class="quick-add-row">
+  <button class="quick-add-btn" onclick="quickAdd('餐饮','050000|050100|050200|050300|050400|050500|050600|050700|050800',8,{050000:0,050100:0.5,050200:0,050300:-0.5,050400:0.5,050500:0.5,050600:0,050700:0,050800:0})">➕ 餐饮</button>
+  <button class="quick-add-btn" onclick="quickAdd('银行','160100|160101|160200|160300',6,{160100:0.5,160101:0,160200:0,160300:0})">➕ 银行</button>
+  <button class="quick-add-btn" onclick="quickAdd('酒店','100000|100100|100200|100300|100500',7,{100000:0,100100:0.5,100200:0,100300:-0.5,100500:0.5})">➕ 酒店</button>
+  <button class="quick-add-btn" onclick="quickAdd('公园','110000|110100|110200|110300|110400|110500',8,{110000:0,110100:0.5,110200:0.5,110300:0,110400:0.5,110500:0.5})">➕ 公园</button>
+  <button class="quick-add-btn" onclick="quickAdd('菜场','060300|060301|060302|060400',6,{060300:0,060301:0,060302:0,060400:0})">➕ 菜场</button>
+  <button class="quick-add-btn" onclick="quickAdd('加油站','151300|151400|151500',4,{151300:0,151400:0,151500:0})">➕ 加油站</button>
+  <button class="quick-add-btn" onclick="quickAdd('停车场','150600',3,{150600:0})">➕ 停车场</button>
+  <button class="quick-add-btn" onclick="quickAdd('影院KTV','080600|080700|080800|080300|080400',5,{080600:0.5,080700:0,080800:0,080300:0,080400:0})">➕ 影院KTV</button>
+</div>
+</div>
+
+<h3 class="section-title tooltip" data-tip="导入CSV格式的候选点位、竞品、租金、热力数据" onclick="toggleImport()" id="importHeader"><span class="logo" style="background:#e8f5e9">📥</span>数据导入<span id="importArrow" class="arrow" style="margin-left:auto">▶</span></h3>
+<div class="data-section" id="importSection" style="display:none;">
+  <button class="file-btn" onclick="document.getElementById('fileSites').click()">+ 批量导入候选点位（CSV）</button>
+  <input type="file" id="fileSites" class="file-input" accept=".csv" onchange="importSites(this)">
+  <div class="import-status" id="statusSites">未导入</div>
+
+  <button class="file-btn" onclick="document.getElementById('fileRival').click()">+ 导入竞品数据（CSV）</button>
+  <input type="file" id="fileRival" class="file-input" accept=".csv" onchange="importRivalData(this)">
+  <div class="import-status" id="statusRival">未导入</div>
+
+  <button class="file-btn" onclick="document.getElementById('fileRent').click()">+ 导入租金数据（CSV）</button>
+  <input type="file" id="fileRent" class="file-input" accept=".csv" onchange="importRentData(this)">
+  <div class="import-status" id="statusRent">未导入</div>
+
+  <button class="file-btn" onclick="document.getElementById('fileHeat').click()">+ 导入人口热力（CSV/JSON）</button>
+  <input type="file" id="fileHeat" class="file-input" accept=".csv,.json" onchange="importHeatData(this)">
+  <div class="import-status" id="statusHeat">未导入</div>
+
+  <div style="margin-top:6px;font-size:11px;color:#888;line-height:1.5;">
+    <b>CSV格式：</b>候选点<code>name,lat,lng</code> / 竞品<code>name,lat,lng,score,perCapita</code> / 租金<code>address,lat,lng,rentYuanPerMonth,area</code> / 热力<code>lat,lng,workdayScore,weekendScore</code>
+  </div>
+</div>
+
+<h3 class="section-title tooltip" data-tip="距离越近权重越高：≤250m×100%, 250-500m×60%, 500-750m×30%" onclick="togglePanelSection(this)"><span class="logo" style="background:#fff3e0">📐</span>距离衰减模型<span class="arrow">▼</span></h3>
+<div class="section-content">
+<div style="font-size:11px;color:#888;line-height:1.7;background:#fff;padding:8px;border-radius:4px">
+  <span class="ring-dot" style="background:#FF4444"></span>≤250m：权重×100%<br>
+  <span class="ring-dot" style="background:#FF8800"></span>250-500m：权重×60%<br>
+  <span class="ring-dot" style="background:#FFBB00"></span>500-750m：权重×30%<br>
+  <span class="ring-dot" style="background:#ccc"></span>>750m：不计入
+</div>
+</div>
+
+<div id="loading">⏳ 检索中...</div>
+
+
+<div class="legend-wrap" id="legendWrap">
+  <h3 class="section-title tooltip" data-tip="地图上各色标记的含义对照" onclick="toggleContainer(this)"><span class="logo" style="background:#fbe9e7">🗺️</span>图例<span class="arrow">▼</span></h3>
+  <div class="section-content">
+    <div class="legend-grid" id="legendGrid">
+      <div class="legend-item"><span class="legend-dot" style="background:#FF6B6B"></span><span class="legend-label">住宅</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#4ECDC4"></span><span class="legend-label">学校</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#45B7D1"></span><span class="legend-label">医院</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#FFA07A"></span><span class="legend-label">办公</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#98D8C8"></span><span class="legend-label">超市/便利店</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#8BC34A"></span><span class="legend-label">菜场/花卉</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#9C27B0"></span><span class="legend-label">交通</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#FF9800"></span><span class="legend-label">餐饮</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#4CAF50"></span><span class="legend-label">公园</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#E91E63"></span><span class="legend-label">酒店</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#FF5722"></span><span class="legend-label">影院/KTV</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#f53f3f"></span><span class="legend-label">竞品</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#52c41a"></span><span class="legend-label">租金</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#d32f2f"></span><span class="legend-label">热力(高)</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#f57c00"></span><span class="legend-label">热力(中)</span></div>
+      <div class="legend-item"><span class="legend-dot" style="background:#fbc02d"></span><span class="legend-label">热力(低)</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="result-box" id="currentResult">
+  <h3 class="section-title tooltip" data-tip="当前选中点位的详细评分结果" onclick="toggleContainer(this)"><span class="logo" style="background:#fce4ec">📍</span>当前点位<span class="arrow">▼</span></h3>
+  <div class="section-content">
+  <div class="empty">点击地图设置点位</div>
+  </div>
+</div>
+
+<div class="rank-box" id="rankBox" style="display:none">
+  <h3 class="section-title tooltip" data-tip="所有候选点位的综合评分排名对比" onclick="toggleContainer(this)"><span class="logo" style="background:#f3e5f5">🏆</span>所有点位排名<span class="arrow">▼</span></h3>
+  <div class="section-content">
+  <table class="rank-table" id="rankTable"></table>
+  </div>
+</div>
+
+<div class="sens-wrap" id="sensWrap">
+  <h3 class="section-title tooltip" data-tip="调整权重参数对总分的影响趋势分析" onclick="toggleContainer(this)"><span class="logo" style="background:#e0f2f1">📈</span>权重敏感性分析<span class="arrow">▼</span></h3>
+  <div class="section-content">
+  <div id="sensChart"></div>
+  </div>
+</div>
+
+<div class="compare-box" id="compare" onclick="openResultModal()">
+  <h3>⚖️ 生成完整评估报告</h3>
+  <div id="compareText">请先设置至少一个点位</div>
+</div>
+
+<div class="radar-wrap" id="radarWrap">
+  <h3 class="section-title tooltip" data-tip="各点位在不同评估维度上的能力雷达对比" onclick="toggleContainer(this)"><span class="logo" style="background:#e8eaf6">📡</span>综合评分雷达图<span class="arrow">▼</span></h3>
+  <div class="section-content">
+  <div id="radarChart"></div>
+  </div>
+</div>
+</div>
+
+<div id="map"></div>
+
+<!-- 弹窗 -->
+<div class="modal-overlay" id="resultModal">
+  <div class="modal-content" id="reportContent">
+    <span class="modal-close" onclick="closeResultModal()">&times;</span>
+    <div class="modal-title">📊 选址评估对比报告</div>
+
+    <div class="modal-section">
+      <h4>📍 点位信息</h4>
+      <div id="modalSiteInfo"></div>
+    </div>
+
+    <div class="modal-section">
+      <h4>🏆 点位排名</h4>
+      <table class="modal-table" id="rankModalTable"></table>
+    </div>
+
+    <div class="modal-section">
+      <h4>各点位综合得分</h4>
+      <div id="modalScores"></div>
+    </div>
+
+    <div class="modal-section">
+      <h4>点位地图</h4>
+      <div class="map-screenshot-wrap" id="modalMapWrap"></div>
+    </div>
+
+    <div class="modal-section">
+      <h4>评估规则说明</h4>
+      <div class="rule-box" id="ruleBox"></div>
+    </div>
+
+    <div class="modal-section">
+      <h4>各维度得分明细</h4>
+      <table class="modal-table">
+        <thead><tr><th>评估维度</th><th>各点位得分</th></tr></thead>
+        <tbody id="modalTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="modal-section">
+      <h4>雷达图对比</h4>
+      <div class="modal-radar" id="modalRadarChart"></div>
+    </div>
+
+    <div class="modal-section" id="timeSection" style="display:none">
+      <h4>时间维度分析</h4>
+      <div class="time-compare" id="timeCompare"></div>
+    </div>
+
+    <div class="modal-section">
+      <h4>选址建议</h4>
+      <div class="suggestion-box" id="modalSuggestion">
+        <h5>🎯 综合评估结论</h5>
+        <div id="suggestionText">请先完成点位评估</div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="action-btn primary" onclick="printReport()">🖨️ 打印/另存PDF</button>
+      <button class="action-btn secondary" onclick="downloadReportImage()">📷 下载报告图片</button>
+      <button class="action-btn" style="background:#fa8c16;color:#fff" onclick="exportScoreData()">📊 导出评分数据（CSV）</button>
+    </div>
+  </div>
+</div>
+
+<div id="debug">调试...</div>
+<div id="alert-box">
+<h3>⚠️ 高德API额度不足</h3>
+<p>今日免费调用次数已用完，部分POI数据未能获取。</p>
+<button class="close-btn" onclick="document.getElementById('alert-box').style.display='none'">知道了</button>
+</div>
+
+<script src="https://webapi.amap.com/maps?v=2.0&key=b0dd6ddde6f0130c89dea8f8b20f93fa"></script>
+<script>
+/*
+ * 商业选址智能分析系统 V5
+ * 版权所有 © 2026 陈旭
+ * 本系统包含：距离衰减评分算法、POI权重模型、多点位A/B对比评估引擎、
+ * 权重敏感性分析、步行距离路网计算、时间维度热力分析、批量候选点导入
+ */
+const AMAP_KEY_JS='b0dd6ddde6f0130c89dea8f8b20f93fa';
+const AMAP_KEY_WEB='219f4af617601ca651a5952c90b34253';
+const SEARCH_RADIUS=750;
+const DETAIL_LIMIT=20;
+const SITE_COLORS=['#FF4444','#4488FF','#52C41A','#FA8C16','#722ED1','#13C2C2','#EB2F96','#F5222D'];
+
+let poiCategories=[
+  {key:'house',name:'住宅',baseWeight:5,codes:'120203|120201|120300|120301|120302',
+    subWeights:{'120203':0.5,'120201':0,'120300':-0.5,'120301':-0.5,'120302':-0.5}},
+  {key:'school',name:'学校',baseWeight:10,codes:'141204|141203|141207|141202|141201|141300',
+    subWeights:{'141204':1.0,'141203':0.5,'141207':0.5,'141202':0,'141201':-0.5,'141300':-1.0}},
+  {key:'hospital',name:'医院',baseWeight:5,codes:'090100|090101|090102',
+    subWeights:{'090100':0.5,'090101':0,'090102':-0.5}},
+  {key:'office',name:'办公',baseWeight:15,codes:'160100|160200|160300',
+    subWeights:{'160100':0.5,'160200':0,'160300':-0.5}},
+  {key:'super',name:'超市',baseWeight:10,codes:'060200|060201|060202',
+    subWeights:{'060200':0,'060201':-0.5,'060202':0.5},
+    rivalCode:'060200',rivalPenalty:2},
+  {key:'traffic',name:'交通',baseWeight:12,codes:'150500|150700|150200|150400|150600|150100|150300|150800|150900|151000|151300|151400|151500',
+    subWeights:{'150500':0.5,'150700':2.0,'150200':1.5,'150400':0,'150600':-0.5,'150100':0.5,'150300':0,'150800':1.5,'150900':0,'151000':-0.5,'151300':0,'151400':0,'151500':0}},
+  {key:'road',name:'道路连通性',baseWeight:0,codes:'190000|190100|190200|190300|190400|190500|190600',subWeights:{}},
+  {key:'water',name:'水域包围',baseWeight:0,codes:'210000|210200|210300|210400',subWeights:{}}
+];
+
+const typecodeNames={
+  '120203':'住宅小区','120201':'别墅','120300':'宿舍','120301':'公司宿舍','120302':'学校宿舍',
+  '141204':'大学','141203':'高中','141207':'中学','141202':'初中','141201':'小学','141300':'幼儿园',
+  '090100':'综合医院','090101':'专科医院','090102':'诊所',
+  '160100':'写字楼','160200':'公司/工厂','160300':'园区',
+  '060200':'超市','060201':'便利店','060202':'仓储超市',
+  '150500':'公交车站','150700':'地铁站','150200':'火车站','150400':'长途汽车站',
+  '150600':'停车场','150100':'机场','150300':'港口码头','150800':'轻轨',
+  '150900':'出租车站','151000':'轮渡','151300':'加油站','151400':'加气站','151500':'充电站',
+  '050000':'中餐厅','050100':'外国餐厅','050200':'快餐厅','050300':'休闲餐饮','050400':'咖啡厅','050500':'茶座','050600':'甜品店','050700':'冷饮店','050800':'零食店',
+  '100000':'酒店','100100':'星级酒店','100200':'快捷酒店','100300':'公寓式酒店','100500':'旅馆',
+  '110000':'公园','110100':'公园广场','110200':'植物园','110300':'动物园','110400':'游乐园','110500':'水上乐园',
+  '060300':'菜市场','060301':'水果店','060302':'水产店','060400':'花卉市场',
+  '080600':'电影院','080700':'KTV','080800':'网吧','080300':'影剧院','080400':'剧场',
+  '190000':'道路','190100':'普通道路','190200':'高速公路','190300':'桥梁','190400':'隧道','190500':'入口出口','190600':'立交桥',
+  '210000':'水域','210200':'湖泊','210300':'河流','210400':'海湾'
+};
+
+const ringColors=['#FF4444','#FF8800','#FFBB00'];
+let map;
+let distMode='straight';
+let sites=[];
+let currentSiteId=null;
+let siteCounter=0;
+let limitAlerted=false;
+let radarChart=null,modalRadarChart=null,sensChart=null;
+
+function dbg(msg){var el=document.getElementById('debug');if(el){var t=el.textContent;el.textContent=(t==='调试...'?'':t+'\n')+msg;el.scrollTop=el.scrollHeight;}console.log(msg);}
+function showLimitAlert(){if(!limitAlerted){limitAlerted=true;document.getElementById('alert-box').style.display='block';}}
+
+function getDistanceM(lng1,lat1,lng2,lat2){
+  var R=6371000;var dLat=(lat2-lat1)*Math.PI/180;var dLng=(lng2-lng1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return 2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function getRingLabel(dist){if(dist<=250)return '≤250m';if(dist<=500)return '250-500m';if(dist<=750)return '500-750m';return '>750m';}
+function getRingMultiplier(dist){if(dist<=250)return 1.0;if(dist<=500)return 0.6;if(dist<=750)return 0.3;return 0;}
+
+function setDistMode(mode){distMode=mode;recalcAll();}
+
+function getNextSiteId(){return 'site_'+(++siteCounter);}
+function getSiteColor(idx){return SITE_COLORS[idx%SITE_COLORS.length];}
+function getSiteLabel(idx){return String.fromCharCode(65+idx);}
+
+function createSite(name,lat,lng){
+  var id=getNextSiteId();
+  var idx=sites.length;
+  var color=getSiteColor(idx);
+  var label=getSiteLabel(idx);
+  var site={id:id,name:name||label+'点',label:label,color:color,lnglat:lat!=null?new AMap.LngLat(lng,lat):null,
+    mainMarker:null,circles:[],poiMarkers:[],rawPois:[],scores:{},total:0,
+    rivalData:[],rentData:[],heatData:[],walkCache:{}};
+  sites.push(site);return site;
+}
+
+function renderSiteBar(){
+  var bar=document.getElementById('siteBar');bar.innerHTML='';
+  sites.forEach(function(site,idx){
+    var tab=document.createElement('div');
+    tab.className='site-tab'+(site.id===currentSiteId?' active':'');
+    tab.innerHTML='<span class="dot" style="background:'+site.color+'"></span>'+site.name+'<span class="close" onclick="event.stopPropagation();removeSite(\''+site.id+'\')">&times;</span>';
+    tab.onclick=function(){setCurrentSite(site.id);};
+    bar.appendChild(tab);
+  });
+}
+
+function setCurrentSite(id){
+  currentSiteId=id;renderSiteBar();
+  var site=sites.find(function(s){return s.id===id;});
+  if(site&&site.total>0){renderCurrentResult(site);}else{
+    var box=document.getElementById('currentResult');
+    var h3=box.querySelector('h3');var content=box.querySelector('.section-content');
+    if(h3&&content){h3.innerHTML='📍 '+site.name+' <span class="arrow" style="font-size:12px;color:#888;transition:transform 0.2s">▼</span>';content.innerHTML='<div class="empty">点击地图设置点位</div>';}
+    else{box.innerHTML='<h3 style="cursor:pointer;display:flex;align-items:center;gap:6px;" onclick="toggleContainer(this)">📍 '+site.name+' <span class="arrow" style="font-size:12px;color:#888;transition:transform 0.2s">▼</span></h3><div class="section-content"><div class="empty">点击地图设置点位</div></div>';}
+  }
+}
+
+function addSite(name,lat,lng){
+  if(sites.length>=8){alert('最多支持8个点位');return;}
+  var site=createSite(name,lat,lng);
+  if(lat!=null&&lng!=null){
+    placeSiteOnMap(site);
+  }else{
+    setCurrentSite(site.id);
+  }
+  renderSiteBar();updateRank();updateCompare();updateRadar();
+}
+
+function placeSiteOnMap(site){
+  if(!site.lnglat)return;
+  var color=site.color;
+  site.mainMarker=new AMap.Marker({
+    position:site.lnglat,
+    content:'<div style="width:28px;height:36px;background:'+color+';color:#fff;font-size:14px;font-weight:bold;line-height:36px;text-align:center;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.3);"><span style="display:inline-block;transform:rotate(45deg);">'+site.label+'</span></div>',
+    offset:new AMap.Pixel(-14,-36)
+  });
+  map.add(site.mainMarker);
+  [250,500,750].forEach(function(r,idx){
+    var c=new AMap.Circle({center:site.lnglat,radius:r,fillColor:color,fillOpacity:0.06*(3-idx),strokeColor:ringColors[idx],strokeOpacity:0.7,strokeWeight:1.5,strokeStyle:idx===0?'solid':'dashed'});
+    map.add(c);site.circles.push(c);
+  });
+  // 反向地理编码获取地址
+  fetchAddress(site.lnglat.lng,site.lnglat.lat,function(addr){
+    site.address=addr||'未知地址';
+  });
+  document.getElementById('loading').style.display='block';
+  searchAllPOI(site);
+}
+
+function removeSite(id){
+  if(!confirm('确定删除该点位？'))return;
+  var idx=sites.findIndex(function(s){return s.id===id;});
+  if(idx<0)return;
+  var site=sites[idx];
+  clearSiteMap(site);sites.splice(idx,1);
+  // 重新分配标签和颜色
+  sites.forEach(function(s,i){s.label=getSiteLabel(i);s.color=getSiteColor(i);});
+  currentSiteId=sites.length>0?sites[0].id:null;
+  renderSiteBar();updateRank();updateCompare();updateRadar();
+}
+
+function clearSiteMap(site){
+  if(site.mainMarker){map.remove(site.mainMarker);site.mainMarker=null;}
+  site.circles.forEach(function(c){map.remove(c);});site.circles=[];
+  site.poiMarkers.forEach(function(m){map.remove(m);});site.poiMarkers=[];
+}
+
+function clearAllSites(){
+  if(!confirm('确定删除所有点位？'))return;
+  sites.forEach(function(site){clearSiteMap(site);});
+  sites=[];siteCounter=0;currentSiteId=null;
+  document.getElementById('currentResult').innerHTML='<h3 style="cursor:pointer;display:flex;align-items:center;gap:6px;" onclick="toggleContainer(this)">📍 当前点位 <span class="arrow" style="font-size:12px;color:#888;transition:transform 0.2s">▼</span></h3><div class="section-content"><div class="empty">点击地图设置点位</div></div>';
+  document.getElementById('rankBox').style.display='none';
+  document.getElementById('sensWrap').style.display='none';
+  document.getElementById('compare').style.display='none';
+  document.getElementById('radarWrap').style.display='none';
+  renderSiteBar();limitAlerted=false;
+}
+
+function recalcAll(){
+  sites.forEach(function(site){if(site.lnglat){calcScore(site);}});
+  updateRank();updateCompare();updateRadar();updateSens();
+}
+
+// 批量导入点位
+function openPOIInfo(poi,dist,typeName,color){
+  var parts=poi.location.split(',');
+  var plng=parseFloat(parts[0]),plat=parseFloat(parts[1]);
+  var info='<div style="padding:10px;font-size:13px;line-height:1.8;max-width:280px;">';
+  info+='<div style="font-size:15px;font-weight:bold;color:'+color+';margin-bottom:6px;">'+poi.name+'</div>';
+  info+='<div style="color:#888;font-size:11px;margin-bottom:8px;">'+typeName+'</div>';
+  info+='<div>📏 距离: <b>'+dist.toFixed(0)+'m</b> ('+getRingLabel(dist)+')</div>';
+  if(poi._rating)info+='<div>⭐ 评分: <b>'+poi._rating+'</b></div>';
+  if(poi._cost)info+='<div>💰 人均: <b>'+poi._cost+'元</b></div>';
+  if(poi.address)info+='<div>📍 地址: '+poi.address+'</div>';
+  if(poi.tel)info+='<div>📞 电话: '+poi.tel+'</div>';
+  if(poi.biz_type)info+='<div>🏷️ 类型: '+poi.biz_type+'</div>';
+  info+='</div>';
+  var iw=new AMap.InfoWindow({content:info,offset:new AMap.Pixel(0,-20)});
+  iw.open(map,[plng,plat]);
+}
+
+function toggleImport(){
+  var section=document.getElementById('importSection');
+  var arrow=document.getElementById('importArrow');
+  if(section.style.display==='none'){section.style.display='block';arrow.innerHTML='▼';arrow.style.transform='rotate(90deg)';}
+  else{section.style.display='none';arrow.innerHTML='▶';arrow.style.transform='rotate(0deg)';}
+}
+
+function togglePanelSection(h3){
+  var arrow=h3.querySelector('.arrow');
+  var content=h3.nextElementSibling;
+  if(!content||!content.classList.contains('section-content'))return;
+  var hide=arrow.textContent==='▼';
+  content.style.display=hide?'none':'block';
+  arrow.textContent=hide?'▶':'▼';
+}
+
+function toggleContainer(h3){
+  var parent=h3.parentElement;
+  var arrow=h3.querySelector('.arrow');
+  var hide=arrow.textContent==='▼';
+  for(var i=0;i<parent.children.length;i++){
+    if(parent.children[i]!==h3){parent.children[i].style.display=hide?'none':'';}
+  }
+  arrow.textContent=hide?'▶':'▼';
+}
+
+function showLoading(text){
+  var overlay=document.getElementById('loadingOverlay');
+  var txt=document.getElementById('loadingText');
+  if(txt)txt.textContent=text||'正在加载中...';
+  if(overlay)overlay.classList.add('active');
+}
+
+function hideLoading(){
+  var overlay=document.getElementById('loadingOverlay');
+  if(overlay)overlay.classList.remove('active');
+}
+
+function importSites(input){
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=parseCSV(e.target.result);
+      var added=0;
+      data.forEach(function(item){
+        var lat=parseFloat(item.lat),lng=parseFloat(item.lng);
+        if(!isNaN(lat)&&!isNaN(lng)){
+          addSite(item.name||'点位',lat,lng);added++;
+        }
+      });
+      document.getElementById('statusSites').textContent='已导入 '+added+' 个候选点位';
+      document.getElementById('statusSites').className='import-status ok';
+    }catch(err){document.getElementById('statusSites').textContent='导入失败';document.getElementById('statusSites').className='import-status err';}
+  };
+  reader.readAsText(file);input.value='';
+}
+
+function parseCSV(text){
+  var lines=text.replace(/\r/g,'').split('\n').filter(function(l){return l.trim();});
+  if(lines.length<2)return[];
+  var headers=lines[0].split(',').map(function(h){return h.trim();});
+  return lines.slice(1).map(function(line){
+    var vals=line.split(',').map(function(v){return v.trim();});
+    var obj={};headers.forEach(function(h,i){obj[h]=vals[i];});
+    return obj;
+  }).filter(function(o){return o.lat&&o.lng;});
+}
+
+
+function importRivalData(input){
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{var data=parseCSV(e.target.result);sites.forEach(function(s){s.rivalData=data;});
+      document.getElementById('statusRival').textContent='已导入 '+data.length+' 条竞品数据';
+      document.getElementById('statusRival').className='import-status ok';recalcAll();
+    }catch(err){document.getElementById('statusRival').textContent='导入失败';document.getElementById('statusRival').className='import-status err';}
+  };
+  reader.readAsText(file);input.value='';
+}
+function importRentData(input){
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{var data=parseCSV(e.target.result);sites.forEach(function(s){s.rentData=data;});
+      document.getElementById('statusRent').textContent='已导入 '+data.length+' 条租金数据';
+      document.getElementById('statusRent').className='import-status ok';recalcAll();
+    }catch(err){document.getElementById('statusRent').textContent='导入失败';document.getElementById('statusRent').className='import-status err';}
+  };
+  reader.readAsText(file);input.value='';
+}
+function importHeatData(input){
+  var file=input.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{var text=e.target.result;var data=[];
+      if(file.name.endsWith('.json')){data=JSON.parse(text);}else{data=parseCSV(text);}
+      sites.forEach(function(s){s.heatData=data;});
+      document.getElementById('statusHeat').textContent='已导入 '+data.length+' 条热力数据';
+      document.getElementById('statusHeat').className='import-status ok';recalcAll();
+    }catch(err){document.getElementById('statusHeat').textContent='导入失败';document.getElementById('statusHeat').className='import-status err';}
+  };
+  reader.readAsText(file);input.value='';
+}
+
+// 渲染评估点
+function renderCatList(){
+  var container=document.getElementById('catList');container.innerHTML='';
+  poiCategories.forEach(function(cat,idx){
+    var div=document.createElement('div');div.className='cat-section';
+    var html='<div class="cat-header"><span class="cat-title">'+cat.name+'</span><div class="cat-actions"><button class="icon-btn del" onclick="removeCategory('+idx+')">删除</button></div></div>'+
+      '<div class="weight-row"><span class="label">基础权重</span><input type="number" value="'+cat.baseWeight+'" min="0" step="0.5" onchange="updateWeight('+idx+',this.value)"> 分</div>';
+    if(cat.rivalCode){
+      html+='<div class="sub-rule">竞争扣：每多1家扣 <input type="number" value="'+(cat.rivalPenalty||2)+'" min="0" step="0.5" style="width:45px" onchange="updateRivalPenalty('+idx+',this.value)"> 分</div>';
+    }
+    div.innerHTML=html;container.appendChild(div);
+  });
+}
+function updateWeight(idx,val){poiCategories[idx].baseWeight=parseFloat(val)||0;recalcAll();}
+function updateRivalPenalty(idx,val){poiCategories[idx].rivalPenalty=parseFloat(val)||0;recalcAll();}
+function addCategory(){var name=prompt('请输入新类别名称（如：餐饮、银行）：');if(!name)return;var codes=prompt('请输入高德POI类型码（多个用|分隔）：');if(!codes)return;var weight=parseFloat(prompt('请输入基础权重（如：8）：'))||5;poiCategories.push({key:'cat_'+Date.now(),name:name,baseWeight:weight,codes:codes,subWeights:{}});renderCatList();recalcAll();}
+function quickAdd(name,codes,weight,subWeights){poiCategories.push({key:'cat_'+Date.now(),name:name,baseWeight:weight,codes:codes,subWeights:subWeights||{}});renderCatList();recalcAll();}
+function removeCategory(idx){if(!confirm('确定删除 "'+poiCategories[idx].name+'" 吗？'))return;poiCategories.splice(idx,1);renderCatList();recalcAll();}
+
+// 高德API
+
+function fetchDetail(poiId,cb){
+  var cbName='cbd_'+Date.now()+'_'+Math.floor(Math.random()*10000);
+  var url='https://restapi.amap.com/v3/place/detail?key='+AMAP_KEY_WEB+'&id='+poiId+'&callback='+cbName;
+  var timeout=setTimeout(function(){cleanup();cb(null);},10000);
+  window[cbName]=function(res){clearTimeout(timeout);var detail=(res.status==='1'&&res.pois&&res.pois.length>0)?res.pois[0]:null;cleanup();cb(detail);};
+  var script=document.createElement('script');script.src=url;
+  script.onerror=function(){clearTimeout(timeout);cleanup();cb(null);};
+  function cleanup(){delete window[cbName];if(script.parentNode)document.body.removeChild(script);}
+  document.body.appendChild(script);
+}
+function fetchDetails(pois,cb){
+  var limited=pois.slice(0,DETAIL_LIMIT);var idx=0,merged=0;
+  function next(){if(idx>=limited.length){dbg('详情完成: '+merged+'/'+limited.length);cb();return;}
+    var poi=limited[idx++];setTimeout(function(){fetchDetail(poi.id,function(detail){if(detail){poi._detail=detail;poi._rating=detail.biz_ext?detail.biz_ext.rating:null;poi._cost=detail.biz_ext?detail.biz_ext.cost:null;merged++;}next();});},idx===1?0:600);
+  }next();
+}
+function fetchPOI(lng,lat,codes,cb){
+  var cbName='cb_'+Date.now()+'_'+Math.floor(Math.random()*10000);
+  var url='https://restapi.amap.com/v3/place/around?key='+AMAP_KEY_WEB+'&location='+lng+','+lat+'&radius='+SEARCH_RADIUS+'&types='+codes+'&offset=25&page=1&callback='+cbName;
+  var timeout=setTimeout(function(){cleanup();cb(null,'timeout');},10000);
+  window[cbName]=function(res){clearTimeout(timeout);var pois=null,info='';if(res.status==='1'){pois=res.pois||[];info='OK count='+pois.length;}else{info=res.info||'未知';if(info.indexOf('OVER_LIMIT')>=0||info.indexOf('DAILY')>=0)showLimitAlert();}cleanup();cb(pois,info);};
+  var script=document.createElement('script');script.src=url;
+  script.onerror=function(){clearTimeout(timeout);cleanup();cb(null,'network');};
+  function cleanup(){delete window[cbName];if(script.parentNode)document.body.removeChild(script);}
+  document.body.appendChild(script);
+}
+function fetchAddress(lng,lat,cb){
+  var cbName='adr_'+Date.now()+'_'+Math.floor(Math.random()*10000);
+  var url='https://restapi.amap.com/v3/geocode/regeo?key='+AMAP_KEY_WEB+'&location='+lng+','+lat+'&extensions=all&callback='+cbName;
+  var timeout=setTimeout(function(){cleanup();cb(null);},10000);
+  window[cbName]=function(res){
+    clearTimeout(timeout);
+    var addr=null;
+    if(res.status==='1'&&res.regeocode){addr=res.regeocode.formatted_address||null;}
+    cleanup();cb(addr);
+  };
+  var script=document.createElement('script');script.src=url;
+  script.onerror=function(){clearTimeout(timeout);cleanup();cb(null);};
+  function cleanup(){delete window[cbName];if(script.parentNode)document.body.removeChild(script);}
+  document.body.appendChild(script);
+}
+
+function fetchWalkingDistance(fromLng,fromLat,toLng,toLat,cb){
+  var cbName='wlk_'+Date.now()+'_'+Math.floor(Math.random()*10000);
+  var url='https://restapi.amap.com/v3/direction/walking?key='+AMAP_KEY_WEB+'&origin='+fromLng+','+fromLat+'&destination='+toLng+','+toLat+'&callback='+cbName;
+  var timeout=setTimeout(function(){cleanup();cb(null);},10000);
+  window[cbName]=function(res){clearTimeout(timeout);var dist=null;if(res.status==='1'&&res.route&&res.route.paths&&res.route.paths.length>0){dist=parseInt(res.route.paths[0].distance)||null;}cleanup();cb(dist);};
+  var script=document.createElement('script');script.src=url;
+  script.onerror=function(){clearTimeout(timeout);cleanup();cb(null);};
+  function cleanup(){delete window[cbName];if(script.parentNode)document.body.removeChild(script);}
+  document.body.appendChild(script);
+}
+
+// 地图初始化
+window.onload=function(){
+  showLoading('正在加载地图...');
+  try{
+    map=new AMap.Map('map',{zoom:14,center:[117.20,39.13],resizeEnable:true});
+    map.on('click',function(e){
+      if(!currentSiteId){addSite();}
+      var site=sites.find(function(s){return s.id===currentSiteId;});
+      if(!site)return;
+      clearSiteMap(site);
+      site.lnglat=e.lnglat;
+      placeSiteOnMap(site);
+    });
+    hideLoading();
+  }catch(err){hideLoading();dbg('初始化失败: '+err.message);}
+  addSite();renderSiteBar();renderCatList();
+};
+
+function searchAllPOI(site){
+  showLoading('正在调取运算中...');
+  var allPois=[];var idx=0;
+  function next(){
+    if(idx>=poiCategories.length){
+      fetchDetails(allPois,function(){
+        hideLoading();
+        document.getElementById('loading').style.display='none';
+        site.rawPois=allPois;
+        // 如果是步行模式，先计算步行距离
+        if(distMode==='walking'){
+          calcWalkingDistances(site,function(){
+            drawPOIMarkers(allPois,site);
+            drawRivalMarkers(site);drawRentMarkers(site);drawHeatMarkers(site);
+            calcScore(site);renderCurrentResult(site);updateRank();updateCompare();updateRadar();updateSens();
+          });
+        }else{
+          drawPOIMarkers(allPois,site);
+          drawRivalMarkers(site);drawRentMarkers(site);drawHeatMarkers(site);
+          calcScore(site);renderCurrentResult(site);updateRank();updateCompare();updateRadar();updateSens();
+        }
+      });
+      return;
+    }
+    var cat=poiCategories[idx++];
+    setTimeout(function(){
+      fetchPOI(site.lnglat.lng,site.lnglat.lat,cat.codes,function(pois,info){
+        if(pois)allPois=allPois.concat(pois);
+        dbg('['+site.name+']['+cat.name+'] 获取'+(pois?pois.length:0)+'个');
+        next();
+      });
+    },idx===1?0:800);
+  }
+  next();
+}
+
+function calcWalkingDistances(site,cb){
+  // 只计算500m以内的POI步行距离，避免API超限
+  var targets=[];site.rawPois.forEach(function(poi){
+    if(!poi.location)return;
+    var parts=poi.location.split(',');if(parts.length<2)return;
+    var plng=parseFloat(parts[0]),plat=parseFloat(parts[1]);
+    var d=getDistanceM(site.lnglat.lng,site.lnglat.lat,plng,plat);
+    if(d<=500)targets.push({poi:poi,lat:plat,lng:plng});
+  });
+  if(targets.length===0){cb();return;}
+  // 限制最多20个
+  var limited=targets.slice(0,20);var i=0;
+  if(limited.length>0)showLoading('正在计算步行距离...');
+  function step(){
+    if(i>=limited.length){hideLoading();cb();return;}
+    var t=limited[i++];var key=t.poi.location;
+    if(site.walkCache[key]){t.poi._walkDist=site.walkCache[key];step();return;}
+    fetchWalkingDistance(site.lnglat.lng,site.lnglat.lat,t.lng,t.lat,function(dist){
+      if(dist){site.walkCache[key]=dist;t.poi._walkDist=dist;}
+      step();
+    });
+  }
+  step();
+}
+
+function drawPOIMarkers(pois,site){
+  var colorMap={'1202':'#FF6B6B','1203':'#FF6B6B','1412':'#4ECDC4','1413':'#4ECDC4','0901':'#45B7D1','0902':'#45B7D1','1601':'#FFA07A','1602':'#FFA07A','1603':'#FFA07A','0602':'#98D8C8','0601':'#98D8C8','0603':'#8BC34A','0604':'#8BC34A','1505':'#9C27B0','1507':'#9C27B0','1502':'#9C27B0','1504':'#9C27B0','1506':'#9C27B0','1501':'#9C27B0','1503':'#9C27B0','1508':'#9C27B0','1509':'#9C27B0','1510':'#9C27B0','1513':'#9C27B0','1514':'#9C27B0','1515':'#9C27B0','0500':'#FF9800','0501':'#FF9800','0502':'#FF9800','0503':'#FF9800','0504':'#FF9800','0505':'#FF9800','0506':'#FF9800','0507':'#FF9800','0508':'#FF9800','1100':'#4CAF50','1101':'#4CAF50','1102':'#4CAF50','1103':'#4CAF50','1104':'#4CAF50','1105':'#4CAF50','1000':'#E91E63','1001':'#E91E63','1002':'#E91E63','1003':'#E91E63','1005':'#E91E63','0806':'#FF5722','0807':'#FF5722','0808':'#FF5722','0803':'#FF5722','0804':'#FF5722'};
+  var center=site.lnglat;
+  pois.forEach(function(poi){
+    if(!poi.location)return;
+    var parts=poi.location.split(',');if(parts.length<2)return;
+    var plng=parseFloat(parts[0]),plat=parseFloat(parts[1]);
+    var dist=distMode==='walking'&&poi._walkDist?poi._walkDist:getDistanceM(center.lng,center.lat,plng,plat);
+    var tc=(poi.typecode||'').substring(0,4);
+    var color=colorMap[tc]||'#999';
+    var name=typecodeNames[tc]||tc;
+    var label=name.substring(0,1);
+    var alpha=dist<=250?1.0:(dist<=500?0.8:(dist<=750?0.5:0.2));
+    var title=poi.name+' ('+getRingLabel(dist)+')';
+    if(poi._rating)title+=' 评分:'+poi._rating;
+    if(poi._cost)title+=' 人均:'+poi._cost+'元';
+    var m=new AMap.Marker({
+      position:[plng,plat],
+      content:'<div style="width:16px;height:16px;border-radius:50%;background:'+color+';color:#fff;font-size:9px;line-height:16px;text-align:center;font-family:sans-serif;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:pointer;opacity:'+alpha+';" title="'+title+'">'+label+'</div>',
+      offset:new AMap.Pixel(-8,-8)
+    });
+    m.on('click',function(){openPOIInfo(poi,dist,name,color);});
+    map.add(m);site.poiMarkers.push(m);
+  });
+  document.getElementById('legendWrap').style.display='block';
+}
+function drawRivalMarkers(site){
+  var data=site.rivalData;if(!data||!data.length)return;var center=site.lnglat;
+  data.forEach(function(item){
+    var lat=parseFloat(item.lat),lng=parseFloat(item.lng);if(isNaN(lat)||isNaN(lng))return;
+    if(getDistanceM(center.lng,center.lat,lng,lat)>SEARCH_RADIUS)return;
+    var m=new AMap.Marker({
+      position:[lng,lat],
+      content:'<div style="width:20px;height:20px;border-radius:50%;background:#f53f3f;color:#fff;font-size:10px;line-height:20px;text-align:center;font-family:sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.4);cursor:pointer;border:2px solid #fff;" title="竞品: '+item.name+'">竞</div>',
+      offset:new AMap.Pixel(-10,-10)
+    });
+    m.on('click',function(){
+      var d=getDistanceM(center.lng,center.lat,lng,lat).toFixed(0);
+      var info='<div style="padding:8px;font-size:13px;line-height:1.8;"><b style="color:#f53f3f;font-size:15px;">🎯 竞品信息</b><br><b>'+item.name+'</b><br>📏 距离: '+d+'m<br>⭐ 评分: '+(item.score||'N/A')+'<br>💰 人均: '+(item.perCapita||'N/A')+'元</div>';
+      var iw=new AMap.InfoWindow({content:info,offset:new AMap.Pixel(0,-20)});
+      iw.open(map,[lng,lat]);
+    });
+    map.add(m);site.poiMarkers.push(m);
+  });
+}
+function drawRentMarkers(site){
+  var data=site.rentData;if(!data||!data.length)return;var center=site.lnglat;
+  data.forEach(function(item){
+    var lat=parseFloat(item.lat),lng=parseFloat(item.lng);if(isNaN(lat)||isNaN(lng))return;
+    if(getDistanceM(center.lng,center.lat,lng,lat)>SEARCH_RADIUS)return;
+    var m=new AMap.Marker({
+      position:[lng,lat],
+      content:'<div style="width:20px;height:20px;border-radius:4px;background:#52c41a;color:#fff;font-size:10px;line-height:20px;text-align:center;font-family:sans-serif;box-shadow:0 1px 4px rgba(0,0,0,0.4);cursor:pointer;border:1px solid #fff;" title="租金: '+(item.rentYuanPerMonth||'N/A')+'元/月">租</div>',
+      offset:new AMap.Pixel(-10,-10)
+    });
+    m.on('click',function(){
+      var d=getDistanceM(center.lng,center.lat,lng,lat).toFixed(0);
+      var info='<div style="padding:8px;font-size:13px;line-height:1.8;"><b style="color:#52c41a;font-size:15px;">💰 租金信息</b><br><b>'+(item.address||'未知地址')+'</b><br>📏 距离: '+d+'m<br>💵 租金: '+(item.rentYuanPerMonth||'N/A')+'元/月<br>📐 面积: '+(item.area||'?')+'㎡<br>📊 单价: '+(item.rentYuanPerMonth&&item.area?(item.rentYuanPerMonth/item.area).toFixed(1):'N/A')+'元/㎡/月</div>';
+      var iw=new AMap.InfoWindow({content:info,offset:new AMap.Pixel(0,-20)});
+      iw.open(map,[lng,lat]);
+    });
+    map.add(m);site.poiMarkers.push(m);
+  });
+}
+function drawHeatMarkers(site){
+  var data=site.heatData;if(!data||!data.length)return;var center=site.lnglat;
+  data.forEach(function(item){
+    var lat=parseFloat(item.lat),lng=parseFloat(item.lng);if(isNaN(lat)||isNaN(lng))return;
+    if(getDistanceM(center.lng,center.lat,lng,lat)>SEARCH_RADIUS)return;
+    var score=item.workdayScore||item.score||0;
+    var color=score>80?'#d32f2f':(score>50?'#f57c00':'#fbc02d');
+    var m=new AMap.Marker({
+      position:[lng,lat],
+      content:'<div style="width:14px;height:14px;border-radius:50%;background:'+color+';opacity:0.7;box-shadow:0 0 6px '+color+';cursor:pointer;" title="热力: '+score+'"></div>',
+      offset:new AMap.Pixel(-7,-7)
+    });
+    m.on('click',function(){
+      var d=getDistanceM(center.lng,center.lat,lng,lat).toFixed(0);
+      var wd=item.workdayScore||item.score||0;
+      var we=item.weekendScore||item.score||0;
+      var info='<div style="padding:8px;font-size:13px;line-height:1.8;"><b style="color:'+color+';font-size:15px;">🔥 热力数据</b><br>📏 距离: '+d+'m<br>📅 工作日: '+wd.toFixed(0)+'<br>🎉 周末: '+we.toFixed(0)+'</div>';
+      var iw=new AMap.InfoWindow({content:info,offset:new AMap.Pixel(0,-15)});
+      iw.open(map,[lng,lat]);
+    });
+    map.add(m);site.poiMarkers.push(m);
+  });
+}
+
+// 评分计算
+function calcScore(site){
+  var center=site.lnglat;var data=site.rawPois;
+  var scores={};var html='<h3>📍 '+site.name+'</h3>';
+  var hasData=data&&data.length>0;
+
+  poiCategories.forEach(function(cat){
+    var baseW=cat.baseWeight;
+    var classPois=[];
+    data.forEach(function(poi){
+      var tc=poi.typecode||'';
+      if(cat.codes.split('|').indexOf(tc)>=0){
+        var parts=poi.location.split(',');
+        var plng=parseFloat(parts[0]),plat=parseFloat(parts[1]);
+        var dist=distMode==='walking'&&poi._walkDist?poi._walkDist:getDistanceM(center.lng,center.lat,plng,plat);
+        classPois.push({poi:poi,dist:dist,tc:tc});
+      }
+    });
+    // 特殊类别：道路连通性（封闭/断头路惩罚）
+    if(cat.key==='road'){
+      var roadCount=classPois.length;
+      var roadPenalty=0;
+      if(roadCount===0)roadPenalty=15;
+      else if(roadCount===1)roadPenalty=10;
+      else if(roadCount<=3)roadPenalty=5;
+      scores[cat.key]=-roadPenalty;
+      html+='<div style="margin:6px 0;font-weight:bold;font-size:12px;color:#333;">'+cat.name+'</div>';
+      if(roadPenalty>0){
+        html+='<div class="result-row" style="color:#f53f3f;"><span class="label">⚠️ 道路'+roadCount+'条（'+(roadCount===0?'完全封闭/断头路':(roadCount===1?'断头路':'道路稀疏'))+'）</span><span class="value">-'+roadPenalty.toFixed(1)+'</span></div>';
+      }else{
+        html+='<div class="result-row"><span class="label">道路'+roadCount+'条（连通正常）</span><span class="value">0.0</span></div>';
+      }
+      return;
+    }
+    // 特殊类别：水域包围（被水域包围惩罚）
+    if(cat.key==='water'){
+      var waterCount=classPois.length;
+      var waterPenalty=0;
+      if(waterCount>=3)waterPenalty=8;
+      else if(waterCount>=1)waterPenalty=3;
+      scores[cat.key]=-waterPenalty;
+      html+='<div style="margin:6px 0;font-weight:bold;font-size:12px;color:#333;">'+cat.name+'</div>';
+      if(waterPenalty>0){
+        html+='<div class="result-row" style="color:#f53f3f;"><span class="label">⚠️ 水域'+waterCount+'处（'+(waterCount>=3?'被水域包围':'临近水域')+'）</span><span class="value">-'+waterPenalty.toFixed(1)+'</span></div>';
+      }else{
+        html+='<div class="result-row"><span class="label">水域0处（无水域风险）</span><span class="value">0.0</span></div>';
+      }
+      return;
+    }
+    if(classPois.length===0){scores[cat.key]=0;return;}
+
+    var subGroups={};
+    classPois.forEach(function(item){
+      if(!subGroups[item.tc])subGroups[item.tc]={count:0,r1:0,r2:0,r3:0};
+      subGroups[item.tc].count++;
+      if(item.dist<=250)subGroups[item.tc].r1++;
+      else if(item.dist<=500)subGroups[item.tc].r2++;
+      else if(item.dist<=750)subGroups[item.tc].r3++;
+    });
+
+    var subTotal=0;
+    html+='<div style="margin:6px 0;font-weight:bold;font-size:12px;color:#333;">'+cat.name+'</div>';
+    Object.keys(subGroups).forEach(function(tc){
+      var g=subGroups[tc];
+      var subW=cat.subWeights?cat.subWeights[tc]||0:0;
+      var finalW=baseW+subW;
+      var score=g.r1*finalW*1.0+g.r2*finalW*0.6+g.r3*finalW*0.3;
+      subTotal+=score;
+      html+='<div class="result-row"><span class="label">'+(typecodeNames[tc]||tc)+' x'+g.count+' (≤250:'+g.r1+' 250-500:'+g.r2+' 500-750:'+g.r3+')</span><span class="value">'+score.toFixed(1)+'</span></div>';
+    });
+
+    if(cat.rivalCode){
+      var rivalCount=0;
+      classPois.forEach(function(item){if(item.tc===cat.rivalCode)rivalCount++;});
+      var penalty=(rivalCount>0)?(rivalCount-1)*(cat.rivalPenalty||2):0;
+      if(penalty>0){
+        html+='<div class="result-row" style="color:#f53f3f;"><span class="label">⚠️ 同类竞争（'+rivalCount+'家，扣'+(rivalCount-1)+'×'+(cat.rivalPenalty||2)+'）</span><span class="value">-'+penalty.toFixed(1)+'</span></div>';
+        subTotal-=penalty;
+      }
+    }
+    scores[cat.key]=Math.max(0,subTotal);
+  });
+
+  if(site.rivalData&&site.rivalData.length>0){
+    var nearby=[];
+    site.rivalData.forEach(function(item){
+      var lat=parseFloat(item.lat),lng=parseFloat(item.lng);
+      if(isNaN(lat)||isNaN(lng))return;
+      if(getDistanceM(center.lng,center.lat,lng,lat)<=SEARCH_RADIUS)nearby.push({score:parseFloat(item.score)||0,perCapita:parseFloat(item.perCapita)||0});
+    });
+    if(nearby.length>0){
+      var avgScore=0,avgPC=0;nearby.forEach(function(r){avgScore+=r.score;avgPC+=r.perCapita;});
+      avgScore/=nearby.length;avgPC/=nearby.length;
+      var rivalScore=Math.max(0,nearby.length*2-avgScore*0.5);
+      scores.rival=rivalScore;
+      html+='<div style="margin:6px 0;font-weight:bold;font-size:12px;color:#333;">竞品竞争指数</div>';
+      html+='<div class="result-row"><span class="label">周边竞品 '+nearby.length+' 家（均分'+avgScore.toFixed(1)+'）</span><span class="value">'+rivalScore.toFixed(1)+'</span></div>';
+    }
+  }
+  if(site.rentData&&site.rentData.length>0){
+    var rents=[];
+    site.rentData.forEach(function(item){
+      var lat=parseFloat(item.lat),lng=parseFloat(item.lng);
+      if(isNaN(lat)||isNaN(lng))return;
+      if(getDistanceM(center.lng,center.lat,lng,lat)<=SEARCH_RADIUS){
+        rents.push({rentPerSqm:(parseFloat(item.rentYuanPerMonth)||0)/(parseFloat(item.area)||1)});
+      }
+    });
+    if(rents.length>0){
+      var avg=0;rents.forEach(function(r){avg+=r.rentPerSqm;});avg/=rents.length;
+      var rentScore=Math.max(0,50-avg*0.3);
+      scores.rent=rentScore;
+      html+='<div style="margin:6px 0;font-weight:bold;font-size:12px;color:#333;">租金性价比</div>';
+      html+='<div class="result-row"><span class="label">周边平均 '+avg.toFixed(0)+'元/㎡/月</span><span class="value">'+rentScore.toFixed(1)+'</span></div>';
+    }
+  }
+  if(site.heatData&&site.heatData.length>0){
+    var heats=[];
+    site.heatData.forEach(function(item){
+      var lat=parseFloat(item.lat),lng=parseFloat(item.lng);
+      if(isNaN(lat)||isNaN(lng))return;
+      if(getDistanceM(center.lng,center.lat,lng,lat)<=SEARCH_RADIUS){
+        heats.push({workday:parseFloat(item.workdayScore)||parseFloat(item.score)||0,weekend:parseFloat(item.weekendScore)||parseFloat(item.score)||0});
+      }
+    });
+    if(heats.length>0){
+      var wd=0,we=0;heats.forEach(function(h){wd+=h.workday;we+=h.weekend;});
+      wd/=heats.length;we/=heats.length;
+      var heatScore=(wd+we)*0.5*0.3;
+      scores.heat=heatScore;
+      scores.workdayScore=wd;scores.weekendScore=we;
+      html+='<div style="margin:6px 0;font-weight:bold;font-size:12px;color:#333;">人口热力</div>';
+      html+='<div class="result-row"><span class="label">工作日均'+wd.toFixed(0)+' 周末均'+we.toFixed(0)+'</span><span class="value">'+heatScore.toFixed(1)+'</span></div>';
+    }
+  }
+
+  var detailCount=0;data.forEach(function(p){if(p._detail)detailCount++;});
+  if(detailCount>0){
+    html+='<div style="margin:6px 0;font-weight:bold;font-size:12px;color:#333;">高德详情</div>';
+    html+='<div class="result-row"><span class="label">详情查询成功 '+detailCount+'/'+data.length+'</span><span class="value"><span class="data-badge badge-detail">详情</span></span></div>';
+  }
+
+  var total=0;Object.keys(scores).forEach(function(k){total+=scores[k];});
+
+  if(!hasData&&!(site.rivalData&&site.rivalData.length>0)&&!(site.rentData&&site.rentData.length>0)&&!(site.heatData&&site.heatData.length>0)){
+    html+='<div class="empty">未检索到POI数据</div>';
+  }else{
+    html+='<div class="total-row">综合总分: '+total.toFixed(1)+'</div>';
+    var grade=total>=200?'⭐ 极优':(total>=100?'✅ 优质':(total>=50?'⚠️ 中等':'❌ 较差'));
+    html+='<div class="grade-row">'+grade+'</div>';
+  }
+  site.scores=scores;site.total=total;
+}
+
+function renderCurrentResult(site){
+  var box=document.getElementById('currentResult');
+  var h3=box.querySelector('h3');
+  var content=box.querySelector('.section-content');
+  if(!h3||!content){
+    box.innerHTML='<h3 style="cursor:pointer;display:flex;align-items:center;gap:6px;" onclick="toggleContainer(this)">📍 '+(site?site.name:'当前点位')+' <span class="arrow" style="font-size:12px;color:#888;transition:transform 0.2s">▼</span></h3><div class="section-content"><div class="empty">未评估</div></div>';
+    return;
+  }
+  if(!site||!site.total){
+    h3.innerHTML='📍 '+(site?site.name:'当前点位')+' <span class="arrow" style="font-size:12px;color:#888;transition:transform 0.2s">▼</span>';
+    content.innerHTML='<div class="empty">未评估</div>';
+    return;
+  }
+  h3.innerHTML='📍 '+site.name+' — 总分 '+site.total.toFixed(1)+' <span class="arrow" style="font-size:12px;color:#888;transition:transform 0.2s">▼</span>';
+  content.innerHTML='<div class="grade-row">'+getGradeText(site.total)+'</div>';
+  content.style.display='block';
+}
+function getGradeText(total){return total>=200?'⭐ 极优':(total>=100?'✅ 优质':(total>=50?'⚠️ 中等':'❌ 较差'));}
+
+function updateRank(){
+  var evaluated=sites.filter(function(s){return s.total>0;});
+  if(evaluated.length===0){document.getElementById('rankBox').style.display='none';return;}
+  document.getElementById('rankBox').style.display='block';
+  var rb=document.getElementById('rankBox');var sc=rb.querySelector('.section-content');if(sc)sc.style.display='block';
+  var sorted=evaluated.slice().sort(function(a,b){return b.total-a.total;});
+  var html='<table class="rank-table"><tr><th>排名</th><th>点位</th><th>总分</th><th>等级</th></tr>';
+  sorted.forEach(function(site,idx){
+    var cls=idx===0?'best':(idx===1?'good':'');
+    html+='<tr class="'+cls+'"><td>'+(idx+1)+'</td><td><span style="color:'+site.color+'">●</span> '+site.name+'</td><td>'+site.total.toFixed(1)+'</td><td>'+getGradeText(site.total)+'</td></tr>';
+  });
+  html+='</table>';
+  document.getElementById('rankTable').innerHTML=html;
+}
+
+function updateCompare(){
+  var evaluated=sites.filter(function(s){return s.total>0;});
+  if(evaluated.length===0){document.getElementById('compare').style.display='none';return;}
+  document.getElementById('compare').style.display='block';
+  var sorted=evaluated.slice().sort(function(a,b){return b.total-a.total;});
+  var best=sorted[0];
+  document.getElementById('compareText').innerHTML='已评估 '+evaluated.length+' 个点位，最优：<b style="color:'+best.color+'">'+best.name+'</b> ('+best.total.toFixed(1)+'分)';
+}
+
+function updateRadar(){
+  var evaluated=sites.filter(function(s){return s.total>0;});
+  if(evaluated.length===0){document.getElementById('radarWrap').style.display='none';return;}
+  document.getElementById('radarWrap').style.display='block';
+  var rw=document.getElementById('radarWrap');var sc=rw.querySelector('.section-content');if(sc)sc.style.display='block';
+  if(!radarChart)radarChart=echarts.init(document.getElementById('radarChart'));
+  var indicator=[],seriesData=[];
+  poiCategories.forEach(function(cat){indicator.push({name:cat.name,max:cat.baseWeight*8});});
+  evaluated.forEach(function(site){
+    var vals=[];poiCategories.forEach(function(cat){vals.push(site.scores[cat.key]||0);});
+    seriesData.push({value:vals,name:site.name,itemStyle:{color:site.color},areaStyle:{color:site.color.replace(')',',0.2)').replace('rgb','rgba').replace('#','')}});
+  });
+  // 简单颜色处理不完美，用固定颜色数组
+  var fixedColors=['#FF4444','#4488FF','#52C41A','#FA8C16','#722ED1','#13C2C2','#EB2F96','#F5222D'];
+  seriesData.forEach(function(d,i){d.itemStyle={color:fixedColors[i%fixedColors.length]};d.areaStyle={color:fixedColors[i%fixedColors.length].replace('#','')+'33'};});
+  radarChart.setOption({
+    tooltip:{trigger:'item'},
+    legend:{data:seriesData.map(function(d){return d.name;}),bottom:0,textStyle:{fontSize:10}},
+    radar:{indicator:indicator,center:['50%','48%'],radius:'55%',splitNumber:4,axisName:{fontSize:10,color:'#666'},splitLine:{lineStyle:{color:'#eee'}},splitArea:{show:true,areaStyle:{color:['#fff','#f9f9f9','#fff','#f9f9f9']}},axisLine:{lineStyle:{color:'#ddd'}}},
+    series:[{type:'radar',data:seriesData,symbolSize:5,lineStyle:{width:2}}]
+  },true);
+}
+
+// 敏感性分析
+function updateSens(){
+  var evaluated=sites.filter(function(s){return s.total>0;});
+  if(evaluated.length===0||poiCategories.length===0){document.getElementById('sensWrap').style.display='none';return;}
+  document.getElementById('sensWrap').style.display='block';
+  var sw=document.getElementById('sensWrap');var sc=sw.querySelector('.section-content');if(sc)sc.style.display='block';
+  if(!sensChart)sensChart=echarts.init(document.getElementById('sensChart'));
+  // 以第一个评估类别为例，展示不同权重下的总分变化
+  var cat=poiCategories[0];
+  var xData=[],series=[];
+  var base=cat.baseWeight;
+  for(var w=Math.max(0,base-5);w<=base+5;w+=0.5){xData.push(w.toFixed(1));}
+  evaluated.forEach(function(site,idx){
+    var data=[];
+    xData.forEach(function(x){
+      var bw=parseFloat(x);
+      // 重新计算该类别得分
+      var center=site.lnglat;var classPois=[];
+      site.rawPois.forEach(function(poi){
+        var tc=poi.typecode||'';
+        if(cat.codes.split('|').indexOf(tc)>=0){
+          var parts=poi.location.split(',');var plng=parseFloat(parts[0]),plat=parseFloat(parts[1]);
+          var dist=distMode==='walking'&&poi._walkDist?poi._walkDist:getDistanceM(center.lng,center.lat,plng,plat);
+          classPois.push({dist:dist,tc:tc});
+        }
+      });
+      var subTotal=0;
+      var subGroups={};
+      classPois.forEach(function(item){
+        if(!subGroups[item.tc])subGroups[item.tc]={r1:0,r2:0,r3:0};
+        if(item.dist<=250)subGroups[item.tc].r1++;
+        else if(item.dist<=500)subGroups[item.tc].r2++;
+        else if(item.dist<=750)subGroups[item.tc].r3++;
+      });
+      Object.keys(subGroups).forEach(function(tc){
+        var g=subGroups[tc];
+        var subW=cat.subWeights?cat.subWeights[tc]||0:0;
+        var finalW=bw+subW;
+        subTotal+=g.r1*finalW*1.0+g.r2*finalW*0.6+g.r3*finalW*0.3;
+      });
+      // 其他类别不变，只改这个
+      var otherTotal=site.total-(site.scores[cat.key]||0);
+      data.push((otherTotal+Math.max(0,subTotal)).toFixed(1));
+    });
+    series.push({name:site.name,type:'line',data:data,smooth:true,itemStyle:{color:site.color}});
+  });
+  sensChart.setOption({
+    tooltip:{trigger:'axis'},
+    legend:{data:evaluated.map(function(s){return s.name;}),top:0,textStyle:{fontSize:10}},
+    grid:{left:40,right:20,top:40,bottom:30},
+    xAxis:{type:'category',data:xData,name:cat.name+'权重',axisLabel:{fontSize:10,rotate:45}},
+    yAxis:{type:'value',name:'总分',axisLabel:{fontSize:10}},
+    series:series
+  },true);
+}
+
+// 弹窗
+function openResultModal(){
+  var evaluated=sites.filter(function(s){return s.total>0;});
+  if(evaluated.length===0){alert('请先设置至少一个点位并完成评估');return;}
+  document.getElementById('resultModal').classList.add('active');
+  var sorted=evaluated.slice().sort(function(a,b){return b.total-a.total;});
+
+  // 点位信息
+  var infoHtml='<table class="modal-table"><thead><tr><th>点位</th><th>坐标</th><th>地址</th></tr></thead><tbody>';
+  sorted.forEach(function(site){
+    infoHtml+='<tr><td style="color:'+site.color+'">'+site.name+'</td><td>'+(site.lnglat?site.lnglat.lng.toFixed(4)+','+site.lnglat.lat.toFixed(4):'N/A')+'</td><td>'+(site.address||'获取中...')+'</td></tr>';
+  });
+  infoHtml+='</tbody></table>';
+  document.getElementById('modalSiteInfo').innerHTML=infoHtml;
+
+  // 排名
+  var rhtml='<tr><th>排名</th><th>点位</th><th>总分</th><th>等级</th><th>领先</th></tr>';
+  sorted.forEach(function(site,idx){
+    var lead=idx>0?(sorted[0].total-site.total).toFixed(1):'—';
+    var cls=idx===0?'best':'';
+    rhtml+='<tr class="'+cls+'"><td>'+(idx+1)+'</td><td style="color:'+site.color+'">'+site.name+'</td><td>'+site.total.toFixed(1)+'</td><td>'+getGradeText(site.total)+'</td><td>'+lead+'</td></tr>';
+  });
+  document.getElementById('rankModalTable').innerHTML=rhtml;
+
+  // 各点位得分
+  var shtml='<div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin:12px 0">';
+  sorted.forEach(function(site){
+    shtml+='<div style="text-align:center"><div style="font-size:13px;color:'+site.color+';font-weight:bold">'+site.name+'</div><div class="score-big" style="color:'+site.color+'">'+site.total.toFixed(1)+'</div><div style="font-size:12px;color:#888">'+getGradeText(site.total)+'</div></div>';
+  });
+  shtml+='</div>';
+  document.getElementById('modalScores').innerHTML=shtml;
+
+  // 地图截图
+  var mhtml='';
+  sorted.forEach(function(site){
+    if(site.lnglat){
+      mhtml+='<div class="map-screenshot"><img src="https://restapi.amap.com/v3/staticmap?key='+AMAP_KEY_WEB+'&location='+site.lnglat.lng+','+site.lnglat.lat+'&zoom=15&size=400*250&markers=mid,,'+site.label+':'+site.lnglat.lng+','+site.lnglat.lat+'" alt="'+site.name+'"><div class="map-screenshot-label" style="color:'+site.color+'">'+site.name+'</div></div>';
+    }
+  });
+  document.getElementById('modalMapWrap').innerHTML=mhtml;
+
+  // 规则说明
+  var ruleHtml='<div class="rule-section"><div class="rule-section-title">一、距离衰减模型</div>';
+  ruleHtml+='≤250m：权重 × 100%　|　250-500m：权重 × 60%　|　500-750m：权重 × 30%　|　>750m：不计入';
+  if(distMode==='walking')ruleHtml+='<br><b>当前模式：步行距离</b>（基于高德路径规划API）';
+  else ruleHtml+='<br><b>当前模式：直线距离</b>';
+  ruleHtml+='</div>';
+  ruleHtml+='<div class="rule-section"><div class="rule-section-title">二、评估类别与权重</div>';
+  ruleHtml+='<table style="width:100%;font-size:11px;border-collapse:collapse"><tr style="background:#f0f0f0"><th style="padding:4px;border:1px solid #ddd">类别</th><th style="padding:4px;border:1px solid #ddd">基础权重</th><th style="padding:4px;border:1px solid #ddd">子类调整</th></tr>';
+  poiCategories.forEach(function(cat){
+    var subTxt='';
+    if(cat.subWeights){Object.keys(cat.subWeights).forEach(function(tc){var w=cat.subWeights[tc];if(w!==0)subTxt+=(typecodeNames[tc]||tc)+(w>0?'+':'')+w+' ';});}
+    if(cat.rivalCode)subTxt+='竞争扣:'+(cat.rivalPenalty||2)+'/家';
+    ruleHtml+='<tr><td style="padding:4px;border:1px solid #ddd">'+cat.name+'</td><td style="padding:4px;border:1px solid #ddd;text-align:center">'+cat.baseWeight+'</td><td style="padding:4px;border:1px solid #ddd">'+(subTxt||'无')+'</td></tr>';
+  });
+  ruleHtml+='</table></div>';
+  document.getElementById('ruleBox').innerHTML=ruleHtml;
+
+  // 明细表格
+  var tbody=document.getElementById('modalTableBody');tbody.innerHTML='';
+  poiCategories.forEach(function(cat){
+    var row=document.createElement('tr');
+    var cellHtml='<td>'+cat.name+'</td><td>';
+    sorted.forEach(function(site){cellHtml+=site.name+':'+(site.scores[cat.key]||0).toFixed(1)+' ';});
+    cellHtml+='</td>';
+    row.innerHTML=cellHtml;
+    tbody.appendChild(row);
+  });
+  ['rival','rent','heat'].forEach(function(k){
+    var labels={'rival':'竞品竞争','rent':'租金性价比','heat':'人口热力'};
+    var hasAny=false;
+    sorted.forEach(function(s){if(s.scores[k])hasAny=true;});
+    if(!hasAny)return;
+    var row=document.createElement('tr');
+    var cellHtml='<td>'+labels[k]+'</td><td>';
+    sorted.forEach(function(site){cellHtml+=site.name+':'+(site.scores[k]||0).toFixed(1)+' ';});
+    cellHtml+='</td>';
+    row.innerHTML=cellHtml;
+    tbody.appendChild(row);
+  });
+
+  // 雷达图
+  if(!modalRadarChart)modalRadarChart=echarts.init(document.getElementById('modalRadarChart'));
+  var indicator=[],seriesData=[];
+  poiCategories.forEach(function(cat){indicator.push({name:cat.name,max:cat.baseWeight*8});});
+  var fixedColors=['#FF4444','#4488FF','#52C41A','#FA8C16','#722ED1','#13C2C2','#EB2F96','#F5222D'];
+  sorted.forEach(function(site,idx){
+    var vals=[];poiCategories.forEach(function(c){vals.push(site.scores[c.key]||0);});
+    seriesData.push({value:vals,name:site.name,itemStyle:{color:fixedColors[idx%fixedColors.length]},areaStyle:{color:fixedColors[idx%fixedColors.length].replace('#','')+'33'}});
+  });
+  modalRadarChart.setOption({
+    tooltip:{trigger:'item'},
+    legend:{data:sorted.map(function(s){return s.name;}),top:0},
+    radar:{indicator:indicator,center:['50%','55%'],radius:'60%',splitNumber:4,axisName:{fontSize:11},splitLine:{lineStyle:{color:'#eee'}},splitArea:{show:true},axisLine:{lineStyle:{color:'#ddd'}}},
+    series:[{type:'radar',data:seriesData,symbolSize:6,lineStyle:{width:2.5}}]
+  },true);
+
+  // 时间维度
+  var hasHeat=false;
+  sorted.forEach(function(s){if(s.scores.workdayScore)hasHeat=true;});
+  if(hasHeat){
+    document.getElementById('timeSection').style.display='block';
+    var thtml='';
+    sorted.forEach(function(site){
+      var wd=site.scores.workdayScore||0,we=site.scores.weekendScore||0;
+      thtml+='<div class="time-card"><div class="time-card-title">'+site.name+'</div><div class="time-card-score">工作日 '+wd.toFixed(0)+'</div><div class="time-card-score" style="color:#FA8C16">周末 '+we.toFixed(0)+'</div></div>';
+    });
+    document.getElementById('timeCompare').innerHTML=thtml;
+  }else{
+    document.getElementById('timeSection').style.display='none';
+  }
+
+  // 建议
+  var suggestion='';
+  if(sorted.length>=1){
+    var best=sorted[0];
+    suggestion='综合评估，<b style="color:'+best.color+'">'+best.name+'</b>为最优选址。';
+    if(sorted.length>1){
+      var adv=[];
+      poiCategories.forEach(function(cat){
+        var bestScore=best.scores[cat.key]||0;
+        var isBest=true;
+        for(var i=1;i<sorted.length;i++){if((sorted[i].scores[cat.key]||0)>bestScore){isBest=false;break;}}
+        if(isBest)adv.push(cat.name);
+      });
+      if(adv.length>0)suggestion+='<br><br>'+best.name+'优势维度：<b>'+adv.join('、')+'</b>。';
+    }
+    suggestion+='<br><br>建议优先考虑'+best.name+'，同时结合实地考察验证租金、交通可达性等未量化因素。';
+  }
+  document.getElementById('suggestionText').innerHTML=suggestion;
+}
+
+function closeResultModal(){document.getElementById('resultModal').classList.remove('active');}
+function printReport(){var t=document.title;document.title='选址评估报告_'+(new Date().toLocaleDateString());window.print();document.title=t;}
+function downloadReportImage(){
+  var el=document.getElementById('reportContent');
+  var oh=el.style.maxHeight,oo=el.style.overflow;
+  el.style.maxHeight='none';el.style.overflow='visible';
+  html2canvas(el,{scale:2,useCORS:true,allowTaint:true,scrollY:0}).then(function(canvas){
+    el.style.maxHeight=oh;el.style.overflow=oo;
+    var link=document.createElement('a');
+    link.download='选址评估报告_'+new Date().toLocaleDateString()+'.png';
+    link.href=canvas.toDataURL('image/png');link.click();
+  }).catch(function(err){el.style.maxHeight=oh;el.style.overflow=oo;alert('截图失败: '+err.message);});
+}
+function exportScoreData(){
+  var evaluated=sites.filter(function(s){return s.total>0;});
+  if(evaluated.length===0)return;
+  // CSV头部
+  var csv='点位名称,坐标,地址,综合总分,等级';
+  poiCategories.forEach(function(cat){csv+=','+cat.name;});
+  csv+=',竞品竞争,租金性价比,人口热力,POI总数,≤250m,250-500m,500-750m\n';
+  // 数据行
+  evaluated.forEach(function(site){
+    var row=[site.name,(site.lnglat?site.lnglat.lng.toFixed(4)+','+site.lnglat.lat.toFixed(4):''),(site.address||''),site.total.toFixed(1),getGradeText(site.total)];
+    poiCategories.forEach(function(cat){row.push((site.scores[cat.key]||0).toFixed(1));});
+    row.push((site.scores.rival||0).toFixed(1),(site.scores.rent||0).toFixed(1),(site.scores.heat||0).toFixed(1));
+    var ringStats={r1:0,r2:0,r3:0};
+    site.rawPois.forEach(function(poi){
+      if(!poi.location)return;
+      var parts=poi.location.split(',');var dist=distMode==='walking'&&poi._walkDist?poi._walkDist:getDistanceM(site.lnglat.lng,site.lnglat.lat,parseFloat(parts[0]),parseFloat(parts[1]));
+      if(dist<=250)ringStats.r1++;else if(dist<=500)ringStats.r2++;else if(dist<=750)ringStats.r3++;
+    });
+    row.push(site.rawPois.length,ringStats.r1,ringStats.r2,ringStats.r3);
+    csv+=row.join(',')+'\n';
+  });
+  // BOM让Excel正确识别中文
+  var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  var link=document.createElement('a');
+  link.download='选址评分数据_'+new Date().toLocaleDateString()+'.csv';
+  link.href=URL.createObjectURL(blob);link.click();
+}
+
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeResultModal();});
+document.getElementById('resultModal').addEventListener('click',function(e){if(e.target===this)closeResultModal();});
+window.addEventListener('resize',function(){if(radarChart)radarChart.resize();if(modalRadarChart)modalRadarChart.resize();if(sensChart)sensChart.resize();});
+</script>
+
+<!-- 全局加载遮罩 -->
+<div id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">正在加载中...</div>
+</div>
+</body>
+</html>
